@@ -1,7 +1,7 @@
 export {};
 
-const { ObjectId } = require('mongodb');
-const { getDB } = require('../config/db');
+const { ObjectId } = require("mongodb");
+const { getDB } = require("../config/db");
 const {
   isValidObjectId,
   buildPropertyFilter,
@@ -10,7 +10,7 @@ const {
   sendError,
   sendSuccess,
   populatePostedBy,
-} = require('../utils/helpers');
+} = require("../utils/helpers");
 
 /**
  * GET /api/properties
@@ -18,20 +18,17 @@ const {
 async function listProperties(req: any, res: any): Promise<void> {
   try {
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const filter = buildPropertyFilter(req.query);
     // Only show approved properties (or those without status field for backward compat)
     const statusFilter = [
-      { status: 'approved' },
+      { status: "approved" },
       { status: { $exists: false } },
     ];
     // If buildPropertyFilter created $or (for text search), combine with $and to avoid overwrite
     if (filter.$or) {
-      filter.$and = [
-        { $or: filter.$or },
-        { $or: statusFilter },
-      ];
+      filter.$and = [{ $or: filter.$or }, { $or: statusFilter }];
       delete filter.$or;
     } else {
       filter.$or = statusFilter;
@@ -65,8 +62,8 @@ async function listProperties(req: any, res: any): Promise<void> {
       totalPages,
     });
   } catch (error: any) {
-    console.error('List properties error:', error);
-    sendError(res, 500, 'Server error while fetching properties.');
+    console.error("List properties error:", error);
+    sendError(res, 500, "Server error while fetching properties.");
   }
 }
 
@@ -77,26 +74,26 @@ async function listProperties(req: any, res: any): Promise<void> {
 async function getFeaturedProperties(req: any, res: any): Promise<void> {
   try {
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     // Get top 4 most reviewed approved properties via aggregation
     const pipeline = [
       {
         $match: {
-          $or: [{ status: 'approved' }, { status: { $exists: false } }],
+          $or: [{ status: "approved" }, { status: { $exists: false } }],
         },
       },
       {
         $lookup: {
-          from: 'reviews',
-          localField: '_id',
-          foreignField: 'propertyId',
-          as: 'reviewData',
+          from: "reviews",
+          localField: "_id",
+          foreignField: "propertyId",
+          as: "reviewData",
         },
       },
       {
         $addFields: {
-          reviewCount: { $size: '$reviewData' },
+          reviewCount: { $size: "$reviewData" },
         },
       },
       { $sort: { reviewCount: -1, rating: -1, createdAt: -1 } },
@@ -120,8 +117,8 @@ async function getFeaturedProperties(req: any, res: any): Promise<void> {
 
     sendSuccess(res, { properties: serialized });
   } catch (error: any) {
-    console.error('Featured properties error:', error);
-    sendError(res, 500, 'Server error while fetching featured properties.');
+    console.error("Featured properties error:", error);
+    sendError(res, 500, "Server error while fetching featured properties.");
   }
 }
 
@@ -133,20 +130,20 @@ async function getProperty(req: any, res: any): Promise<void> {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return sendError(res, 400, 'Invalid property ID.');
+      return sendError(res, 400, "Invalid property ID.");
     }
 
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const property = await collection.findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $inc: { views: 1 } },
-      { returnDocument: 'after' }
+      { returnDocument: "after" },
     );
 
     if (!property) {
-      return sendError(res, 404, 'Property not found.');
+      return sendError(res, 404, "Property not found.");
     }
 
     const serialized: any = {
@@ -159,8 +156,8 @@ async function getProperty(req: any, res: any): Promise<void> {
 
     sendSuccess(res, { property: serialized });
   } catch (error: any) {
-    console.error('Get property error:', error);
-    sendError(res, 500, 'Server error while fetching property.');
+    console.error("Get property error:", error);
+    sendError(res, 500, "Server error while fetching property.");
   }
 }
 
@@ -185,33 +182,37 @@ async function createProperty(req: any, res: any): Promise<void> {
     } = req.body;
 
     if (!title || !title.trim()) {
-      return sendError(res, 400, 'Property title is required.');
+      return sendError(res, 400, "Property title is required.");
     }
     if (!shortDescription || !shortDescription.trim()) {
-      return sendError(res, 400, 'Short description is required.');
+      return sendError(res, 400, "Short description is required.");
     }
     if (!fullDescription || !fullDescription.trim()) {
-      return sendError(res, 400, 'Full description is required.');
+      return sendError(res, 400, "Full description is required.");
     }
 
-    const validTypes = ['apartment', 'villa', 'commercial', 'land'];
+    const validTypes = ["apartment", "villa", "commercial", "land"];
     if (!propertyType || !validTypes.includes(propertyType)) {
-      return sendError(res, 400, 'Valid property type is required (apartment, villa, commercial, land).');
+      return sendError(
+        res,
+        400,
+        "Valid property type is required (apartment, villa, commercial, land).",
+      );
     }
     if (!price || Number(price) <= 0) {
-      return sendError(res, 400, 'A valid price is required.');
+      return sendError(res, 400, "A valid price is required.");
     }
 
-    const validPriceTypes = ['monthly', 'total'];
+    const validPriceTypes = ["monthly", "total"];
     if (!priceType || !validPriceTypes.includes(priceType)) {
-      return sendError(res, 400, 'Price type is required (monthly or total).');
+      return sendError(res, 400, "Price type is required (monthly or total).");
     }
     if (!location || !location.city || !location.area) {
-      return sendError(res, 400, 'Location with city and area is required.');
+      return sendError(res, 400, "Location with city and area is required.");
     }
 
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const now = new Date().toISOString();
     const newProperty = {
@@ -234,7 +235,7 @@ async function createProperty(req: any, res: any): Promise<void> {
       reviewCount: 0,
       views: 0,
       isFeatured: false,
-      status: 'pending',
+      status: "pending",
       postedBy: new ObjectId(req.user.userId),
       createdAt: now,
       updatedAt: now,
@@ -242,16 +243,25 @@ async function createProperty(req: any, res: any): Promise<void> {
 
     const result = await collection.insertOne(newProperty);
 
-    sendSuccess(res, {
-      property: {
-        ...newProperty,
-        _id: result.insertedId.toString(),
-        postedBy: { name: req.user.email, email: req.user.email, avatar: '', role: req.user.role },
+    sendSuccess(
+      res,
+      {
+        property: {
+          ...newProperty,
+          _id: result.insertedId.toString(),
+          postedBy: {
+            name: req.user.email,
+            email: req.user.email,
+            avatar: "",
+            role: req.user.role,
+          },
+        },
       },
-    }, 201);
+      201,
+    );
   } catch (error: any) {
-    console.error('Create property error:', error);
-    sendError(res, 500, 'Server error while creating property.');
+    console.error("Create property error:", error);
+    sendError(res, 500, "Server error while creating property.");
   }
 }
 
@@ -262,72 +272,105 @@ async function updateProperty(req: any, res: any): Promise<void> {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
-      return sendError(res, 400, 'Invalid property ID.');
+      return sendError(res, 400, "Invalid property ID.");
     }
 
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const property = await collection.findOne({ _id: new ObjectId(id) });
     if (!property) {
-      return sendError(res, 404, 'Property not found.');
+      return sendError(res, 404, "Property not found.");
     }
     if (property.postedBy.toString() !== req.user.userId) {
-      return sendError(res, 403, 'You are not authorized to update this property.');
+      return sendError(
+        res,
+        403,
+        "You are not authorized to update this property.",
+      );
     }
 
     const {
-      title, shortDescription, fullDescription, propertyType,
-      price, priceType, location, bedrooms, bathrooms, area, amenities, images,
+      title,
+      shortDescription,
+      fullDescription,
+      propertyType,
+      price,
+      priceType,
+      location,
+      bedrooms,
+      bathrooms,
+      area,
+      amenities,
+      images,
     } = req.body;
 
     const updateFields: any = { updatedAt: new Date().toISOString() };
 
     if (title !== undefined) {
-      if (!title.trim()) return sendError(res, 400, 'Property title is required.');
+      if (!title.trim())
+        return sendError(res, 400, "Property title is required.");
       updateFields.title = title.trim();
     }
     if (shortDescription !== undefined) {
-      if (!shortDescription.trim()) return sendError(res, 400, 'Short description is required.');
+      if (!shortDescription.trim())
+        return sendError(res, 400, "Short description is required.");
       updateFields.shortDescription = shortDescription.trim();
     }
     if (fullDescription !== undefined) {
-      if (!fullDescription.trim()) return sendError(res, 400, 'Full description is required.');
+      if (!fullDescription.trim())
+        return sendError(res, 400, "Full description is required.");
       updateFields.fullDescription = fullDescription.trim();
     }
     if (propertyType !== undefined) {
-      const validTypes = ['apartment', 'villa', 'commercial', 'land'];
+      const validTypes = ["apartment", "villa", "commercial", "land"];
       if (!validTypes.includes(propertyType)) {
-        return sendError(res, 400, 'Valid property type is required (apartment, villa, commercial, land).');
+        return sendError(
+          res,
+          400,
+          "Valid property type is required (apartment, villa, commercial, land).",
+        );
       }
       updateFields.propertyType = propertyType;
     }
     if (price !== undefined) {
-      if (!price || Number(price) <= 0) return sendError(res, 400, 'A valid price is required.');
+      if (!price || Number(price) <= 0)
+        return sendError(res, 400, "A valid price is required.");
       updateFields.price = Number(price);
     }
     if (priceType !== undefined) {
-      const validPriceTypes = ['monthly', 'total'];
+      const validPriceTypes = ["monthly", "total"];
       if (!validPriceTypes.includes(priceType)) {
-        return sendError(res, 400, 'Price type is required (monthly or total).');
+        return sendError(
+          res,
+          400,
+          "Price type is required (monthly or total).",
+        );
       }
       updateFields.priceType = priceType;
     }
     if (location !== undefined) {
       if (!location.city || !location.area) {
-        return sendError(res, 400, 'Location with city and area is required.');
+        return sendError(res, 400, "Location with city and area is required.");
       }
-      updateFields.location = { city: location.city.trim(), area: location.area.trim() };
+      updateFields.location = {
+        city: location.city.trim(),
+        area: location.area.trim(),
+      };
     }
-    if (bedrooms !== undefined) updateFields.bedrooms = bedrooms ? Number(bedrooms) : undefined;
-    if (bathrooms !== undefined) updateFields.bathrooms = bathrooms ? Number(bathrooms) : undefined;
+    if (bedrooms !== undefined)
+      updateFields.bedrooms = bedrooms ? Number(bedrooms) : undefined;
+    if (bathrooms !== undefined)
+      updateFields.bathrooms = bathrooms ? Number(bathrooms) : undefined;
     if (area !== undefined) updateFields.area = area ? Number(area) : undefined;
-    if (amenities !== undefined) updateFields.amenities = Array.isArray(amenities) ? amenities : [];
-    if (images !== undefined) updateFields.images = Array.isArray(images) ? images : [];
+    if (amenities !== undefined)
+      updateFields.amenities = Array.isArray(amenities) ? amenities : [];
+    if (images !== undefined)
+      updateFields.images = Array.isArray(images) ? images : [];
 
     await collection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateFields }
+      { $set: updateFields },
     );
 
     const updated = await collection.findOne({ _id: new ObjectId(id) });
@@ -340,8 +383,8 @@ async function updateProperty(req: any, res: any): Promise<void> {
 
     sendSuccess(res, { property: serialized });
   } catch (error: any) {
-    console.error('Update property error:', error);
-    sendError(res, 500, 'Server error while updating property.');
+    console.error("Update property error:", error);
+    sendError(res, 500, "Server error while updating property.");
   }
 }
 
@@ -351,7 +394,7 @@ async function updateProperty(req: any, res: any): Promise<void> {
 async function getMyProperties(req: any, res: any): Promise<void> {
   try {
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const properties = await collection
       .find({ postedBy: new ObjectId(req.user.userId) })
@@ -368,8 +411,8 @@ async function getMyProperties(req: any, res: any): Promise<void> {
 
     sendSuccess(res, { properties: serialized });
   } catch (error: any) {
-    console.error('Get my properties error:', error);
-    sendError(res, 500, 'Server error while fetching your properties.');
+    console.error("Get my properties error:", error);
+    sendError(res, 500, "Server error while fetching your properties.");
   }
 }
 
@@ -381,27 +424,31 @@ async function deleteProperty(req: any, res: any): Promise<void> {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return sendError(res, 400, 'Invalid property ID.');
+      return sendError(res, 400, "Invalid property ID.");
     }
 
     const db = getDB();
-    const collection = db.collection('properties');
+    const collection = db.collection("properties");
 
     const property = await collection.findOne({ _id: new ObjectId(id) });
     if (!property) {
-      return sendError(res, 404, 'Property not found.');
+      return sendError(res, 404, "Property not found.");
     }
     if (property.postedBy.toString() !== req.user.userId) {
-      return sendError(res, 403, 'You are not authorized to delete this property.');
+      return sendError(
+        res,
+        403,
+        "You are not authorized to delete this property.",
+      );
     }
 
     await collection.deleteOne({ _id: new ObjectId(id) });
-    await db.collection('reviews').deleteMany({ propertyId: new ObjectId(id) });
+    await db.collection("reviews").deleteMany({ propertyId: new ObjectId(id) });
 
-    sendSuccess(res, { message: 'Property deleted successfully.' });
+    sendSuccess(res, { message: "Property deleted successfully." });
   } catch (error: any) {
-    console.error('Delete property error:', error);
-    sendError(res, 500, 'Server error while deleting property.');
+    console.error("Delete property error:", error);
+    sendError(res, 500, "Server error while deleting property.");
   }
 }
 
@@ -413,22 +460,32 @@ async function getStats(req: any, res: any): Promise<void> {
     const db = getDB();
 
     const [totalProperties, totalUsers, totalReviews] = await Promise.all([
-      db.collection('properties').countDocuments(),
-      db.collection('users').countDocuments(),
-      db.collection('reviews').countDocuments(),
+      db.collection("properties").countDocuments({ status: { $ne: "sold" } }),
+      db.collection("users").countDocuments(),
+      db.collection("reviews").countDocuments(),
     ]);
 
-    const cities = await db.collection('properties').distinct('location.city');
+    const cities = await db
+      .collection("properties")
+      .distinct("location.city", { status: { $ne: "sold" } });
 
-    // Property counts by type
+    // Property counts by type (exclude sold)
     const typePipeline = [
-      { $group: { _id: '$propertyType', count: { $sum: 1 } } },
+      { $match: { status: { $ne: "sold" } } },
+      { $group: { _id: "$propertyType", count: { $sum: 1 } } },
     ];
-    const typeCounts = await db.collection('properties').aggregate(typePipeline).toArray();
-    const propertiesByType = typeCounts.map((t: any) => ({ _id: t._id, count: t.count }));
+    const typeCounts = await db
+      .collection("properties")
+      .aggregate(typePipeline)
+      .toArray();
+    const propertiesByType = typeCounts.map((t: any) => ({
+      _id: t._id,
+      count: t.count,
+    }));
 
     // Recent top reviews for testimonials (latest 3 with rating >= 4)
-    const recentReviews = await db.collection('reviews')
+    const recentReviews = await db
+      .collection("reviews")
       .find({ rating: { $gte: 4 } })
       .sort({ createdAt: -1 })
       .limit(3)
@@ -438,14 +495,16 @@ async function getStats(req: any, res: any): Promise<void> {
     const propertyIds = recentReviews
       .map((r: any) => r.propertyId)
       .filter((id: any) => id);
-    const propertyDocs = propertyIds.length > 0
-      ? await db.collection('properties')
-          .find({ _id: { $in: propertyIds } })
-          .project({ title: 1 })
-          .toArray()
-      : [];
+    const propertyDocs =
+      propertyIds.length > 0
+        ? await db
+            .collection("properties")
+            .find({ _id: { $in: propertyIds } })
+            .project({ title: 1 })
+            .toArray()
+        : [];
     const propertyTitleMap = new Map(
-      propertyDocs.map((p: any) => [p._id.toString(), p.title || ''])
+      propertyDocs.map((p: any) => [p._id.toString(), p.title || ""]),
     );
 
     sendSuccess(res, {
@@ -456,18 +515,18 @@ async function getStats(req: any, res: any): Promise<void> {
       propertiesByType,
       recentTestimonials: recentReviews.map((r: any) => ({
         _id: r._id.toString(),
-        propertyId: r.propertyId?.toString() || '',
-        propertyTitle: propertyTitleMap.get(r.propertyId?.toString()) || '',
-        userId: r.userId?.toString() || '',
-        userName: r.userName || 'Anonymous',
+        propertyId: r.propertyId?.toString() || "",
+        propertyTitle: propertyTitleMap.get(r.propertyId?.toString()) || "",
+        userId: r.userId?.toString() || "",
+        userName: r.userName || "Anonymous",
         rating: r.rating || 5,
-        comment: r.comment || '',
-        createdAt: r.createdAt || '',
+        comment: r.comment || "",
+        createdAt: r.createdAt || "",
       })),
     });
   } catch (error: any) {
-    console.error('Get stats error:', error);
-    sendError(res, 500, 'Server error while fetching stats.');
+    console.error("Get stats error:", error);
+    sendError(res, 500, "Server error while fetching stats.");
   }
 }
 
